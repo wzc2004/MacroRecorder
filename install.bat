@@ -1,76 +1,69 @@
-@chcp 65001 >nul
 @echo off
 setlocal enabledelayedexpansion
+title MacroRecorder
 
 cd /d "%~dp0"
-title MacroRecorder - Setup
 
 echo ============================================
-echo   MacroRecorder - Setup
+echo   MacroRecorder
 echo ============================================
 echo.
 
-:: ------------------------------------------------------------------
-:: Step 1: Check Python
-:: ------------------------------------------------------------------
-echo [1/3] Checking Python...
+:: ==================================================================
+:: Check Python
+:: ==================================================================
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
+    echo   Python NOT found.
     echo.
-    echo ============================================
-    echo   Python NOT FOUND
-    echo ============================================
-    echo.
-    echo   MacroRecorder requires Python 3.7 or newer.
-    echo.
-    echo   Option 1: Run environment.bat for auto-install
-    echo            (recommended, installs everything automatically)
-    echo.
-    echo   Option 2: Install manually from python.org
-    echo            CHECK "Add Python to PATH" during install
+    echo   MacroRecorder requires Python 3.7+.
     echo.
     if exist "%~dp0environment.bat" (
-        set /p DOENV="Run environment.bat now? (Y/n): "
-        if /i "!DOENV!" neq "n" (
-            call "%~dp0environment.bat"
-            exit /b 0
-        )
+        echo   Option 1: Run environment.bat (auto-install)
+        echo   Option 2: Install manually from python.org
+        echo.
+        :askenv
+        set /p DOENV="Run environment.bat now? [Y/n]: "
+        if /i "!DOENV!"=="n" goto noenv
+        if /i "!DOENV!"=="N" goto noenv
+        if /i "!DOENV!"=="" goto runenv
+        if /i "!DOENV!"=="y" goto runenv
+        if /i "!DOENV!"=="Y" goto runenv
+        echo Please answer Y or n.
+        goto askenv
+        :runenv
+        call "%~dp0environment.bat"
+        exit /b 0
+        :noenv
     )
+    echo   Download: https://www.python.org/downloads/
+    echo   IMPORTANT: Check "Add Python to PATH" during install.
     pause
     exit /b 1
 )
 
 for /f "tokens=2" %%v in ('python --version 2^>^&1') do set PYVER=%%v
-echo   Python %PYVER% found.
+echo   Python %PYVER% - OK
 
-:: ------------------------------------------------------------------
-:: Step 2: Check pip
-:: ------------------------------------------------------------------
-echo [2/3] Checking pip...
+:: ==================================================================
+:: Check pip
+:: ==================================================================
 pip --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo   pip missing, trying to repair...
+    echo   pip missing, repairing...
     python -m ensurepip --upgrade >nul 2>&1
     pip --version >nul 2>&1
     if %errorlevel% neq 0 (
-        echo   pip could not be repaired.
-        if exist "%~dp0environment.bat" (
-            set /p DOENV="Run environment.bat now? (Y/n): "
-            if /i "!DOENV!" neq "n" (
-                call "%~dp0environment.bat"
-                exit /b 0
-            )
-        )
+        echo   Could not repair pip. Try running environment.bat
         pause
         exit /b 1
     )
 )
-echo   pip OK.
+echo   pip - OK
 
-:: ------------------------------------------------------------------
-:: Step 3: pynput
-:: ------------------------------------------------------------------
-echo [3/3] Checking pynput...
+:: ==================================================================
+:: Check pynput
+:: ==================================================================
 python -c "import pynput" 2>nul
 if %errorlevel% neq 0 (
     echo   Installing pynput...
@@ -80,49 +73,38 @@ if %errorlevel% neq 0 (
     )
     python -c "import pynput" 2>nul
     if %errorlevel% neq 0 (
-        echo.
-        echo   Failed to install pynput.
-        if exist "%~dp0environment.bat" (
-            set /p DOENV="Run environment.bat for auto-setup? (Y/n): "
-            if /i "!DOENV!" neq "n" (
-                call "%~dp0environment.bat"
-                exit /b 0
-            )
-        )
+        echo   Failed to install pynput. Try running environment.bat
         pause
         exit /b 1
     )
     echo   pynput installed.
 ) else (
-    echo   pynput already installed.
+    echo   pynput - OK
 )
 
-:: ------------------------------------------------------------------
+:: ==================================================================
 :: Check tkinter
-:: ------------------------------------------------------------------
+:: ==================================================================
 python -c "import tkinter" 2>nul
 if %errorlevel% neq 0 (
-    echo.
-    echo   WARNING: tkinter NOT FOUND
-    echo.
-    echo   tkinter is required for the GUI.
-    echo   Reinstall Python from python.org with "tcl/tk" checked.
-    echo.
+    echo   tkinter NOT found.
+    echo   Reinstall Python from python.org with "tcl/tk" option.
     pause
     exit /b 1
 )
 
-:: ------------------------------------------------------------------
+:: ==================================================================
 :: Launch
-:: ------------------------------------------------------------------
+:: ==================================================================
 echo.
-echo   All checks passed! Starting MacroRecorder...
+echo   Starting MacroRecorder...
+echo   (Switch to your target window within 5 seconds after recording)
 echo.
 
 python "%~dp0main.py"
 
 if %errorlevel% neq 0 (
     echo.
-    echo   MacroRecorder exited with an error.
+    echo   MacroRecorder exited with an error (code: %errorlevel%).
     pause
 )

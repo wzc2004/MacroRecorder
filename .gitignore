@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+MacroOutputs/
+*.ps1
+!test*.ps1
+.DS_Store
+Thumbs.db
+.claude/

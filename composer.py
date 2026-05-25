@@ -170,8 +170,9 @@ def generate_composed_ps1(playlist: list[dict],
             first_macro = False
             lines.append(f"    Start-Sleep -Seconds {interval_s:.0f}")
         else:
-            # Repeat N times
+            # Repeat N times — Check-Pause between iterations
             lines.append(f"    for ($_rep = 0; $_rep -lt {repeat}; $_rep++) {{")
+            lines.append(f"        Check-Pause")
             _gen_sequence_body(seq, lines, delay_ms, first_macro, indent="        ")
             first_macro = False
             lines.append(f"        Start-Sleep -Seconds {interval_s:.0f}")

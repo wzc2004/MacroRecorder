@@ -106,3 +106,15 @@ public class MouseSim {
     }
 }
 "@"""
+
+CS_KEY_STATE = r"""Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class KeyState {
+    [DllImport("user32.dll")]
+    public static extern short GetKeyState(int vkCode);
+    public static bool IsScrollLockOn() {
+        return (GetKeyState(0x91) & 1) != 0;
+    }
+}
+"@"""

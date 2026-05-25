@@ -10,7 +10,7 @@ from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 
 from analyzer import AnalyzedSequence
-from cs_templates import CS_KEY_SIM, CS_MOUSE_SIM
+from cs_templates import CS_KEY_SIM, CS_MOUSE_SIM, CS_KEY_STATE
 from template_engine import generate_bat, generate_readme
 
 
@@ -105,9 +105,34 @@ def generate_composed_ps1(playlist: list[dict],
         lines.append("")
         lines.append(CS_MOUSE_SIM)
 
+    # ScrollLock pause/resume support
+    lines.append("")
+    lines.append(CS_KEY_STATE)
+
     lines.append("")
     lines.append("")
     lines.append(f"$startupDelaySeconds = {start_delay}")
+    lines.append("")
+
+    # Pause/resume function
+    lines.append(r"""function Check-Pause {
+    if ([KeyState]::IsScrollLockOn()) {
+        Write-Host ''
+        Write-Host '===== PAUSED (ScrollLock ON) ====='
+        Write-Host '  Press ScrollLock again to resume'
+        while ([KeyState]::IsScrollLockOn()) {
+            Start-Sleep -Milliseconds 300
+        }
+        Write-Host 'Resuming in...'
+        for ($c = 5; $c -gt 0; $c--) {
+            Write-Host "  $c..."
+            Start-Sleep -Seconds 1
+        }
+        Write-Host '===== RESUMED ====='
+        Write-Host ''
+    }
+}
+""")
     lines.append("")
 
     # Description
@@ -135,6 +160,7 @@ def generate_composed_ps1(playlist: list[dict],
         interval_s = max(seq.estimated_cycle_interval_ms / 1000.0, 1.0)
         delay_ms = seq.estimated_key_delay_ms
 
+        lines.append(f"    Check-Pause")
         lines.append(f"    # === Macro: {name} (x{repeat}) ===")
         lines.append(f"    Write-Host '>> Stage: {name}'")
 
@@ -499,10 +525,28 @@ class MacroComposer(tk.Toplevel):
             messagebox.showinfo("播放列表为空", "请至少添加一个宏到播放列表。")
             return
 
-        # Output folder
+        # Ask user for name
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        folder_name = f"Composed_{timestamp}"
-        folder_path = os.path.join(self._output_dir, folder_name)
+        default_name = f"Composed_{timestamp}"
+        macro_name = simpledialog.askstring(
+            "命名组合脚本",
+            "为这个组合脚本输入一个名字\n(留空则使用默认名称):",
+            initialvalue="",
+            parent=self)
+        if not macro_name or not macro_name.strip():
+            macro_name = default_name
+        else:
+            macro_name = macro_name.strip()
+            for ch in '<>:"/\\|?*':
+                macro_name = macro_name.replace(ch, '_')
+
+        folder_path = os.path.join(self._output_dir, macro_name)
+        if os.path.exists(folder_path):
+            ok = messagebox.askyesno(
+                "文件夹已存在",
+                f'"{macro_name}" 已存在。\n覆盖旧文件？')
+            if not ok:
+                return
         os.makedirs(folder_path, exist_ok=True)
 
         total_loop = int(self._var_total_loop.get() or "0")
